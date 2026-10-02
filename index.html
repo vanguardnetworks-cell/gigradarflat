@@ -37,6 +37,8 @@ nav button{flex:1;padding:14px 0;background:none;border:0;color:#65746c;font:600
 .zone.pref{border-color:#3e825a;background:#2f814f22;color:#5ccf88}.zone.avoid{border-color:#a14444;background:#f0625f18;color:var(--r)}
 .pin{position:absolute;width:40px;height:40px;border-radius:50%;border:1px solid #35453c;background:#101914;color:#bdc9c2;font:800 11px inherit;font-family:inherit;padding:0}
 .pin.good{background:#113b24;color:#69e39a;border-color:#4aa873}.pin.part{border-color:var(--y);color:var(--y)}.pin.bad{border-color:#a14444;color:var(--r)}
+#splash{position:fixed;inset:0;z-index:99;background:#050907;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .4s}#splash h1{font-size:34px;margin:8px 0 4px}#splash p{color:var(--g);font-weight:700;font-size:16px}
+@media(prefers-reduced-motion:reduce){#splash{transition:none}}
 </style></head><body><div id="app"></div>
 <script>
 const SAMPLE=[
@@ -44,7 +46,7 @@ const SAMPLE=[
 {id:2,app:"Uber Eats",pay:21.75,mi:7.1,min:28,rest:"Taco Lane",zone:"Midtown"},
 {id:3,app:"Grubhub",pay:17.5,mi:5.4,min:24,rest:"Pho Corner",zone:"Downtown"},
 {id:4,app:"Spark (Walmart)",pay:28.2,mi:7.8,min:27,rest:"Walmart Supercenter",zone:"Eastside"}];
-let S={rules:{payout:15,pm:2,hr:25,mi:8,min:30,mpg:28,gas:3.25},req:{payout:1,pm:0,hr:0,mi:1,min:0},blocked:[],pref:[],avoid:[],hist:[],offers:SAMPLE,nid:10,welcomed:0};
+let S={rules:{payout:15,pm:2,hr:25,mi:8,min:30,mpg:28,gas:3.25},req:{payout:1,pm:0,hr:0,mi:1,min:0},blocked:[],pref:[],avoid:[],hist:[],offers:[],nid:10,welcomed:0};
 try{const x=localStorage.getItem("gigradar_v3");if(x)S=Object.assign(S,JSON.parse(x))}catch(e){}
 const save=()=>{try{localStorage.setItem("gigradar_v3",JSON.stringify(S))}catch(e){}};
 const $=n=>"$"+n.toFixed(2),esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -72,7 +74,11 @@ const V={
 welcome:()=>`<div class="hero"><div style="font-size:48px">📡</div><h1>GigRadar</h1><h2 style="font-size:22px">Filter. Your. Income.</h2><p>Set your rules. Add your offers. See which ones meet your requirements.</p></div><button class="btn" onclick="S.welcomed=1;save();go('rules')">Get started</button><button class="btn alt" onclick="S.welcomed=1;save();go('radar')">Skip to radar</button>`,
 radar:()=>{const L=S.offers.map(o=>({o,e:ev(o)})).sort((a,b)=>({good:0,part:1,bad:2}[a.e.st]-{good:0,part:1,bad:2}[b.e.st])||b.e.hr-a.e.hr),n=L.filter(x=>x.e.st=="good").length;
 return`<p class="good">● Radar active</p><h1>${n} ${n==1?"opportunity meets":"opportunities meet"} your rules</h1><p>Your numbers. Your decision.</p>
-${L.length?`<h2>Top match</h2>${card(L[0].o,1)}${L.length>1?"<h2>Other offers</h2>"+L.slice(1).map(x=>card(x.o)).join(""):""}`:`<div class="card"><b>No offers yet</b><p>Tap Add offer to enter one you're considering.</p></div>`}`},
+${L.length?`<h2>Top match</h2>${card(L[0].o,1)}${L.length>1?"<h2>Other offers</h2>"+L.slice(1).map(x=>card(x.o)).join(""):""}`:`<div class="card" style="cursor:default"><b>No offers yet</b><p>Add an offer you're considering, or try a few samples.</p></div><button class="btn" onclick="go('add')">Add an offer</button><button class="btn alt" onclick="trySamples()">Try sample offers</button>`}`},
+about:()=>`<button class="back" onclick="go('rules')">‹ Back</button><h1>About GigRadar</h1><p>GigRadar helps gig drivers decide faster. You set your own rules for pay, miles, time and places. GigRadar checks each offer against them and shows exactly why it passed or didn't. You always make the final call.</p>
+<h2>How it works</h2><div class="chk"><i class="good">1</i><div><b>Set your rules</b><small>Choose which ones are required and which are preferences.</small></div></div><div class="chk"><i class="good">2</i><div><b>Add an offer</b><small>Enter the numbers your gig app shows you.</small></div></div><div class="chk"><i class="good">3</i><div><b>See the result and why</b><small>Meets, partial match or doesn't meet, with the reasons.</small></div></div>
+<h2>Good to know</h2><p>You enter offers yourself. GigRadar doesn't connect to gig apps yet.</p><p>Fuel costs and earnings are estimates, not tax or financial advice.</p><p>GigRadar is not affiliated with or endorsed by any delivery or rideshare platform.</p><p>Your rules, offers and history stay on this device.</p>
+<p class="good" style="margin-top:20px;font-weight:700">Filter. Your. Income.</p><p>Version 1.0 (test)</p><button class="btn alt" onclick="resetAll()">Reset all data</button>`,
 map:()=>{const names=[...new Set([...S.zones,...S.avoid,...S.offers.map(o=>o.zone).filter(Boolean)])].slice(0,6),slots=[[6,8],[50,16],[8,38],[48,46],[10,66],[52,70]],zc=n=>has(S.avoid,n)?"avoid":has(S.zones,n)?"pref":"";
 const ini=a=>({DoorDash:"DD","Uber Eats":"UE",Grubhub:"GH","Spark (Walmart)":"SP",Instacart:"IC",Roadie:"RO","Amazon Flex":"AF",Lyft:"LY"})[a]||a.slice(0,2).toUpperCase();
 return`<h1>Your gig zones</h1><p>Preferred zones are green and avoid zones are red. Tap a pin to open the offer.</p>
@@ -100,10 +106,12 @@ return`<h1>My gig rules</h1><p>Required rules must be met. Others are preference
 <h2>Earnings and trip</h2>${R("payout","Minimum payout ($)",.5,1)}${R("pm","Minimum $/mile",.25,1)}${R("hr","Minimum hourly ($)",1,1)}${R("mi","Maximum miles",.5,1)}${R("min","Maximum minutes",1,1)}
 <h2>Vehicle</h2>${R("gas","Fuel price ($/gal)",.05,0)}${R("mpg","Vehicle MPG",1,0)}
 ${L("blocked","Blocked restaurants","Add a restaurant")}${L("pref","Preferred restaurants","Add a restaurant")}${L("zones","Preferred zones","Add a zone, e.g. Downtown")}${L("avoid","Avoid zones","Add a zone")}
-<button class="btn" onclick="go('radar')">Save my rules</button>`},
+<button class="btn" onclick="go('radar')">Save my rules</button><button class="btn alt" onclick="go('about')">About GigRadar</button>`},
 history:()=>{const A=S.hist.filter(h=>h.st=="Accepted"),g=A.reduce((a,h)=>a+h.pay,0),f=A.reduce((a,h)=>a+h.fuel,0),mi=A.reduce((a,h)=>a+h.mi,0);
 return`<h1>History and earnings</h1><div class="card" style="cursor:default"><p style="margin:0">Accepted offers (estimates)</p><div class="m"><span><b>${$(g)}</b><small>gross</small></span><span><b>-${$(f)}</b><small>fuel</small></span><span><b>${$(g-f)}</b><small>after fuel</small></span><span><b>${mi.toFixed(1)}</b><small>miles</small></span></div></div>
 <h2>Decisions</h2>${S.hist.length?S.hist.map(h=>`<div class="chk"><div style="flex:1"><b>${h.app}</b> ${$(h.pay)}<small>${h.mi} mi · ${h.date}</small></div><b class="${h.st=="Accepted"?"good":"part"}">${h.st}</b></div>`).join(""):`<p>No decisions yet. Accept or pass an offer from the radar.</p>`}`}};
+function trySamples(){S.offers=JSON.parse(JSON.stringify(SAMPLE));save();draw()}
+function resetAll(){if(!confirm("Erase all your rules, offers and history on this device?"))return;try{localStorage.removeItem("gigradar_v3")}catch(e){}location.reload()}
 function addL(k){const el=document.getElementById("l_"+k),v=el.value.trim();if(v){S[k].push(v);save();draw()}}
 function addOffer(){const g=i=>document.getElementById("a_"+i).value,pay=+g("pay"),mi=+g("mi"),min=+g("min");
 if(!(pay>0&&mi>0&&min>0)){document.getElementById("a_err").textContent="Enter payout, miles and minutes as numbers above zero.";return}
@@ -111,5 +119,6 @@ const o={id:S.nid++,app:g("app"),pay,mi,min,rest:g("rest").trim(),zone:g("zone")
 function decide(st){const o=S.offers.find(x=>x.id==sel),e=ev(o);S.hist.unshift({app:o.app,pay:o.pay,mi:o.mi,fuel:e.fuel,st,date:new Date().toLocaleDateString()});S.offers=S.offers.filter(x=>x.id!=sel);save();go("history")}
 function draw(){const a=document.getElementById("app");a.innerHTML=V[tab]()+(tab=="welcome"?"":`<nav>${[["radar","Radar"],["map","Map"],["add","Add offer"],["rules","Rules"],["history","History"]].map(t=>`<button class="${tab==t[0]||(tab=="offer"&&t[0]=="radar")?"on":""}" onclick="go('${t[0]}')">${t[1]}</button>`).join("")}</nav>`)}
 S.zones=S.zones||[];draw();
+if(S.welcomed&&!document.getElementById("splash")){const d=document.createElement("div");d.id="splash";d.innerHTML='<div style="font-size:54px">📡</div><h1>GigRadar</h1><p>Filter. Your. Income.</p>';document.body.appendChild(d);setTimeout(()=>{d.style.opacity=0;setTimeout(()=>d.remove(),400)},1300)}
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){try{navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}}
 </script></body></html>
