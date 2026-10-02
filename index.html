@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050907">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>GigRadar v3</title>
+<style>
+:root{--bg:#050907;--card:#0a110e;--line:#1c2e24;--tx:#edf5f0;--mut:#7f9088;--g:#59e391;--y:#e0b050;--r:#f0625f;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+#app{max-width:520px;margin:auto;min-height:100vh;padding:18px 18px calc(90px + env(safe-area-inset-bottom,0px));background:radial-gradient(circle at 50% -10%,#10241a,#050907 45%)}
+h1{font-size:30px;line-height:1.05;margin:6px 0 4px}h2{font-size:16px;margin:22px 0 8px}p{color:var(--mut);margin:0 0 10px;font-size:13px}
+.good{color:var(--g)}.part{color:var(--y)}.bad{color:var(--r)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px;width:100%;text-align:left;color:inherit;font:inherit;cursor:pointer;display:block}
+.card.top{border-color:#326d4b}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.pill{font-size:11px;font-weight:800;padding:5px 9px;border-radius:99px;background:#103a23;color:var(--g);white-space:nowrap}.pill.part{background:#2d2111;color:var(--y)}.pill.bad{background:#3d1a1e;color:var(--r)}
+.m{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}.m b{display:block;font-size:14px}.m small{color:var(--mut);font-size:10px}
+.big{font-size:34px;font-weight:800}
+.btn{width:100%;padding:14px;border-radius:12px;border:0;background:var(--g);color:#06100a;font:700 15px inherit;font-family:inherit;margin-top:10px;cursor:pointer}.btn.alt{background:#16211b;color:var(--tx)}
+.two{display:flex;gap:8px}
+label{display:block;font-size:11px;color:var(--mut);margin:10px 0 4px}
+input,select{width:100%;padding:11px;border-radius:10px;border:1px solid #203029;background:var(--card);color:var(--tx);font:inherit}
+input[type=checkbox]{width:auto}
+.rule{display:grid;grid-template-columns:1fr 96px auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}.rule span{font-size:13px}.rule label{margin:0;display:flex;gap:5px;align-items:center;font-size:11px}
+.chip{display:inline-flex;gap:6px;align-items:center;background:#101a15;border:1px solid #26372e;border-radius:99px;padding:5px 10px;margin:0 6px 6px 0;font-size:12px}.chip button{background:none;border:0;color:var(--mut);font-size:15px}
+.chk{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}.chk i{font-style:normal;font-weight:800;width:20px}.chk small{display:block;color:var(--mut)}
+nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(520px,100%);display:flex;background:#050907f5;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{flex:1;padding:14px 0;background:none;border:0;color:#65746c;font:600 12px inherit;font-family:inherit}nav .on{color:var(--g)}
+.back{background:none;border:0;color:var(--mut);padding:0 0 10px;font-size:14px}
+.hero{text-align:center;padding:70px 0 20px}.hero h1{font-size:38px}
+</style></head><body><div id="app"></div>
+<script>
+const SAMPLE=[
+{id:1,app:"DoorDash",pay:24.5,mi:6.2,min:31,rest:"Riverside Grill",zone:"Downtown"},
+{id:2,app:"Uber Eats",pay:21.75,mi:7.1,min:28,rest:"Taco Lane",zone:"Midtown"},
+{id:3,app:"Grubhub",pay:17.5,mi:5.4,min:24,rest:"Pho Corner",zone:"Downtown"},
+{id:4,app:"Spark (Walmart)",pay:28.2,mi:7.8,min:27,rest:"Walmart Supercenter",zone:"Eastside"}];
+let S={rules:{payout:15,pm:2,hr:25,mi:8,min:30,mpg:28,gas:3.25},req:{payout:1,pm:0,hr:0,mi:1,min:0},blocked:[],pref:[],avoid:[],hist:[],offers:SAMPLE,nid:10,welcomed:0};
+try{const x=localStorage.getItem("gigradar_v3");if(x)S=Object.assign(S,JSON.parse(x))}catch(e){}
+const save=()=>{try{localStorage.setItem("gigradar_v3",JSON.stringify(S))}catch(e){}};
+const $=n=>"$"+n.toFixed(2),esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const has=(l,v)=>v&&l.some(x=>x.toLowerCase()===v.toLowerCase());
+let tab=S.welcomed?"radar":"welcome",sel=null;
+function ev(o){const r=S.rules,q=S.req,pm=o.pay/o.mi,hr=o.pay/o.min*60,fuel=o.mi/r.mpg*r.gas,C=[];
+const add=(n,req,ok,t)=>C.push({n,req,ok,t});
+add("Minimum payout",q.payout,o.pay>=r.payout,`${$(o.pay)} ${o.pay>=r.payout?"≥":"<"} ${$(r.payout)}`);
+add("Minimum $/mile",q.pm,pm>=r.pm,`${$(pm)} ${pm>=r.pm?"≥":"<"} ${$(r.pm)}`);
+add("Maximum miles",q.mi,o.mi<=r.mi,`${o.mi} ${o.mi<=r.mi?"≤":">"} ${r.mi} miles`);
+add("Maximum time",q.min,o.min<=r.min,`${o.min} ${o.min<=r.min?"≤":">"} ${r.min} minutes`);
+add("Minimum hourly",q.hr,hr>=r.hr,`${$(hr)} ${hr>=r.hr?"≥":"<"} ${$(r.hr)}/hr`);
+if(has(S.blocked,o.rest))add("Blocked location",1,false,"This location is on your blocked list.");
+else if(has(S.pref,o.rest))add("Preferred restaurant",0,true,"This location is on your preferred list.");
+if(has(S.avoid,o.zone))add("Avoid zone",1,false,`${esc(o.zone)} is in your avoid zones.`);
+else if(S.pref.length||0){}
+if(has(S.zones||[],o.zone))add("Preferred zone",0,true,`${esc(o.zone)} is a preferred zone.`);
+const bad=C.some(c=>!c.ok&&c.req),part=C.some(c=>!c.ok&&!c.req);
+return{C,pm,hr,fuel,after:o.pay-fuel,st:bad?"bad":part?"part":"good",match:Math.round(C.filter(c=>c.ok).length/C.length*100),n:C.filter(c=>c.ok).length}}
+const LBL={good:"MEETS YOUR RULES",part:"PARTIAL MATCH",bad:"DOESN'T MEET YOUR RULES"};
+const go=t=>{tab=t;sel=null;draw();scrollTo(0,0)};
+const card=(o,top)=>{const e=ev(o);return`<button class="card ${top?"top":""}" onclick="sel=${o.id};go2()"><div class="row"><b>${o.app}</b><span class="pill ${e.st}">${e.match}% · ${LBL[e.st]}</span></div><div class="m"><span><b>${$(o.pay)}</b><small>payout</small></span><span><b>${o.mi} mi</b><small>distance</small></span><span><b>${$(e.pm)}</b><small>$/mile</small></span><span><b>${$(e.hr)}</b><small>per hour</small></span></div></button>`};
+const go2=()=>{tab="offer";draw();scrollTo(0,0)};
+const V={
+welcome:()=>`<div class="hero"><div style="font-size:48px">📡</div><h1>GigRadar</h1><h2 style="font-size:20px">Make every mile count.</h2><p>Set your rules. Add your offers. See which ones meet your requirements.</p></div><button class="btn" onclick="S.welcomed=1;save();go('rules')">Get started</button><button class="btn alt" onclick="S.welcomed=1;save();go('radar')">Skip to radar</button>`,
+radar:()=>{const L=S.offers.map(o=>({o,e:ev(o)})).sort((a,b)=>({good:0,part:1,bad:2}[a.e.st]-{good:0,part:1,bad:2}[b.e.st])||b.e.hr-a.e.hr),n=L.filter(x=>x.e.st=="good").length;
+return`<p class="good">● Radar active</p><h1>${n} ${n==1?"opportunity meets":"opportunities meet"} your rules</h1><p>Your numbers. Your decision.</p>
+${L.length?`<h2>Top match</h2>${card(L[0].o,1)}${L.length>1?"<h2>Other offers</h2>"+L.slice(1).map(x=>card(x.o)).join(""):""}`:`<div class="card"><b>No offers yet</b><p>Tap Add offer to enter one you're considering.</p></div>`}`},
+add:()=>`<h1>Add an offer</h1><p>Enter what the gig app shows you.</p>
+<label>Platform</label><select id="a_app">${["DoorDash","Uber Eats","Grubhub","Spark (Walmart)","Instacart","Roadie","Amazon Flex","Lyft","Other"].map(x=>`<option>${x}</option>`).join("")}</select>
+<label>Payout ($)</label><input id="a_pay" type="number" step="0.25" inputmode="decimal">
+<label>Total miles</label><input id="a_mi" type="number" step="0.1" inputmode="decimal">
+<label>Estimated minutes</label><input id="a_min" type="number" inputmode="numeric">
+<label>Restaurant / business</label><input id="a_rest">
+<label>Zone or area</label><input id="a_zone"><p id="a_err" class="bad" style="margin-top:8px"></p>
+<button class="btn" onclick="addOffer()">Evaluate offer</button>`,
+offer:()=>{const o=S.offers.find(x=>x.id==sel);if(!o)return V.radar();const e=ev(o),ic={true:["✓","good"],false:null};
+return`<button class="back" onclick="go('radar')">‹ Back</button><div class="card" style="cursor:default"><div class="row"><b>${o.app}</b><span class="pill ${e.st}">${e.match}% match</span></div><div class="big">${$(o.pay)}</div><p style="margin:0">${esc(o.rest||"Restaurant not listed")}${o.zone?" · "+esc(o.zone):""}</p>
+<div class="m"><span><b>${o.mi} mi</b><small>distance</small></span><span><b>${o.min} min</b><small>time</small></span><span><b>${$(e.pm)}</b><small>$/mile</small></span><span><b>${$(e.hr)}</b><small>per hour</small></span></div></div>
+<div class="card" style="cursor:default"><div class="row"><span>Estimated fuel</span><b>${$(e.fuel)}</b></div><div class="row"><span>After-fuel earnings</span><b class="good">${$(e.after)}</b></div></div>
+<h2 class="${e.st}">${LBL[e.st]}</h2><p>${e.n} of ${e.C.length} checks met. Why this result:</p>
+${e.C.map(c=>`<div class="chk"><i class="${c.ok?"good":c.req?"bad":"part"}">${c.ok?"✓":c.req?"✕":"⚠"}</i><div><b>${c.n}</b> <small style="display:inline">${c.ok?"Meets":c.req?"Required, not met":"Outside preference"}</small><small>${c.t}</small></div></div>`).join("")}
+<div class="two"><button class="btn alt" onclick="decide('Passed')">Pass</button><button class="btn" onclick="decide('Accepted')">${e.st=="bad"?"Accept anyway":"Accept"}</button></div>`},
+rules:()=>{const r=S.rules,R=(k,l,st,c)=>`<div class="rule"><span>${l}</span><input type="number" step="${st}" value="${r[k]}" onchange="S.rules.${k}=+this.value||0;save()">${c?`<label><input type="checkbox" ${S.req[k]?"checked":""} onchange="S.req.${k}=this.checked?1:0;save()">Required</label>`:"<span></span>"}</div>`,
+L=(k,t,ph)=>`<h2>${t}</h2><div>${S[k].map((x,i)=>`<span class="chip">${esc(x)}<button onclick="S.${k}.splice(${i},1);save();draw()">×</button></span>`).join("")}</div><div class="two"><input id="l_${k}" placeholder="${ph}"><button class="btn alt" style="width:90px;margin:0" onclick="addL('${k}')">Add</button></div>`;
+return`<h1>My gig rules</h1><p>Required rules must be met. Others are preferences that give a partial match.</p>
+<h2>Earnings and trip</h2>${R("payout","Minimum payout ($)",.5,1)}${R("pm","Minimum $/mile",.25,1)}${R("hr","Minimum hourly ($)",1,1)}${R("mi","Maximum miles",.5,1)}${R("min","Maximum minutes",1,1)}
+<h2>Vehicle</h2>${R("gas","Fuel price ($/gal)",.05,0)}${R("mpg","Vehicle MPG",1,0)}
+${L("blocked","Blocked restaurants","Add a restaurant")}${L("pref","Preferred restaurants","Add a restaurant")}${L("zones","Preferred zones","Add a zone, e.g. Downtown")}${L("avoid","Avoid zones","Add a zone")}
+<button class="btn" onclick="go('radar')">Save my rules</button>`},
+history:()=>{const A=S.hist.filter(h=>h.st=="Accepted"),g=A.reduce((a,h)=>a+h.pay,0),f=A.reduce((a,h)=>a+h.fuel,0),mi=A.reduce((a,h)=>a+h.mi,0);
+return`<h1>History and earnings</h1><div class="card" style="cursor:default"><p style="margin:0">Accepted offers (estimates)</p><div class="m"><span><b>${$(g)}</b><small>gross</small></span><span><b>-${$(f)}</b><small>fuel</small></span><span><b>${$(g-f)}</b><small>after fuel</small></span><span><b>${mi.toFixed(1)}</b><small>miles</small></span></div></div>
+<h2>Decisions</h2>${S.hist.length?S.hist.map(h=>`<div class="chk"><div style="flex:1"><b>${h.app}</b> ${$(h.pay)}<small>${h.mi} mi · ${h.date}</small></div><b class="${h.st=="Accepted"?"good":"part"}">${h.st}</b></div>`).join(""):`<p>No decisions yet. Accept or pass an offer from the radar.</p>`}`}};
+function addL(k){const el=document.getElementById("l_"+k),v=el.value.trim();if(v){S[k].push(v);save();draw()}}
+function addOffer(){const g=i=>document.getElementById("a_"+i).value,pay=+g("pay"),mi=+g("mi"),min=+g("min");
+if(!(pay>0&&mi>0&&min>0)){document.getElementById("a_err").textContent="Enter payout, miles and minutes as numbers above zero.";return}
+const o={id:S.nid++,app:g("app"),pay,mi,min,rest:g("rest").trim(),zone:g("zone").trim()};S.offers.unshift(o);save();sel=o.id;go2()}
+function decide(st){const o=S.offers.find(x=>x.id==sel),e=ev(o);S.hist.unshift({app:o.app,pay:o.pay,mi:o.mi,fuel:e.fuel,st,date:new Date().toLocaleDateString()});S.offers=S.offers.filter(x=>x.id!=sel);save();go("history")}
+function draw(){const a=document.getElementById("app");a.innerHTML=V[tab]()+(tab=="welcome"?"":`<nav>${[["radar","Radar"],["add","Add offer"],["rules","Rules"],["history","History"]].map(t=>`<button class="${tab==t[0]||(tab=="offer"&&t[0]=="radar")?"on":""}" onclick="go('${t[0]}')">${t[1]}</button>`).join("")}</nav>`)}
+S.zones=S.zones||[];draw();
+if('serviceWorker' in navigator&&location.protocol.startsWith('http')){try{navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}}
+</script></body></html>
