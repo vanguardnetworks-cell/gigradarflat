@@ -31,6 +31,12 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(520px,
 nav button{flex:1;padding:14px 0;background:none;border:0;color:#65746c;font:600 12px inherit;font-family:inherit}nav .on{color:var(--g)}
 .back{background:none;border:0;color:var(--mut);padding:0 0 10px;font-size:14px}
 .hero{text-align:center;padding:70px 0 20px}.hero h1{font-size:38px}
+.map{position:relative;height:460px;border:1px solid var(--line);border-radius:20px;overflow:hidden;background-color:#09130f;background-image:linear-gradient(#102019 1px,transparent 1px),linear-gradient(90deg,#102019 1px,transparent 1px);background-size:38px 38px;margin-top:10px}
+.road{position:absolute;height:7px;background:#172b22;width:130%}.r1{top:45%;left:-15%;transform:rotate(-20deg)}.r2{top:58%;left:-10%;transform:rotate(28deg)}
+.zone{position:absolute;border:1px dashed #3a4a42;background:#ffffff08;border-radius:45%;padding:24px 22px;color:var(--mut);font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.zone.pref{border-color:#3e825a;background:#2f814f22;color:#5ccf88}.zone.avoid{border-color:#a14444;background:#f0625f18;color:var(--r)}
+.pin{position:absolute;width:40px;height:40px;border-radius:50%;border:1px solid #35453c;background:#101914;color:#bdc9c2;font:800 11px inherit;font-family:inherit;padding:0}
+.pin.good{background:#113b24;color:#69e39a;border-color:#4aa873}.pin.part{border-color:var(--y);color:var(--y)}.pin.bad{border-color:#a14444;color:var(--r)}
 </style></head><body><div id="app"></div>
 <script>
 const SAMPLE=[
@@ -63,10 +69,16 @@ const go=t=>{tab=t;sel=null;draw();scrollTo(0,0)};
 const card=(o,top)=>{const e=ev(o);return`<button class="card ${top?"top":""}" onclick="sel=${o.id};go2()"><div class="row"><b>${o.app}</b><span class="pill ${e.st}">${e.match}% · ${LBL[e.st]}</span></div><div class="m"><span><b>${$(o.pay)}</b><small>payout</small></span><span><b>${o.mi} mi</b><small>distance</small></span><span><b>${$(e.pm)}</b><small>$/mile</small></span><span><b>${$(e.hr)}</b><small>per hour</small></span></div></button>`};
 const go2=()=>{tab="offer";draw();scrollTo(0,0)};
 const V={
-welcome:()=>`<div class="hero"><div style="font-size:48px">📡</div><h1>GigRadar</h1><h2 style="font-size:20px">Make every mile count.</h2><p>Set your rules. Add your offers. See which ones meet your requirements.</p></div><button class="btn" onclick="S.welcomed=1;save();go('rules')">Get started</button><button class="btn alt" onclick="S.welcomed=1;save();go('radar')">Skip to radar</button>`,
+welcome:()=>`<div class="hero"><div style="font-size:48px">📡</div><h1>GigRadar</h1><h2 style="font-size:22px">Filter. Your. Income.</h2><p>Set your rules. Add your offers. See which ones meet your requirements.</p></div><button class="btn" onclick="S.welcomed=1;save();go('rules')">Get started</button><button class="btn alt" onclick="S.welcomed=1;save();go('radar')">Skip to radar</button>`,
 radar:()=>{const L=S.offers.map(o=>({o,e:ev(o)})).sort((a,b)=>({good:0,part:1,bad:2}[a.e.st]-{good:0,part:1,bad:2}[b.e.st])||b.e.hr-a.e.hr),n=L.filter(x=>x.e.st=="good").length;
 return`<p class="good">● Radar active</p><h1>${n} ${n==1?"opportunity meets":"opportunities meet"} your rules</h1><p>Your numbers. Your decision.</p>
 ${L.length?`<h2>Top match</h2>${card(L[0].o,1)}${L.length>1?"<h2>Other offers</h2>"+L.slice(1).map(x=>card(x.o)).join(""):""}`:`<div class="card"><b>No offers yet</b><p>Tap Add offer to enter one you're considering.</p></div>`}`},
+map:()=>{const names=[...new Set([...S.zones,...S.avoid,...S.offers.map(o=>o.zone).filter(Boolean)])].slice(0,6),slots=[[6,8],[50,16],[8,38],[48,46],[10,66],[52,70]],zc=n=>has(S.avoid,n)?"avoid":has(S.zones,n)?"pref":"";
+const ini=a=>({DoorDash:"DD","Uber Eats":"UE",Grubhub:"GH","Spark (Walmart)":"SP",Instacart:"IC",Roadie:"RO","Amazon Flex":"AF",Lyft:"LY"})[a]||a.slice(0,2).toUpperCase();
+return`<h1>Your gig zones</h1><p>Preferred zones are green and avoid zones are red. Tap a pin to open the offer.</p>
+<div class="map"><div class="road r1"></div><div class="road r2"></div>${names.map((n,i)=>`<div class="zone ${zc(n)}" style="left:${slots[i][0]}%;top:${slots[i][1]}%">${esc(n)}</div>`).join("")}
+${S.offers.map((o,i)=>{const e=ev(o),zi=names.indexOf(o.zone),z=zi>=0?slots[zi]:null,l=z?z[0]+3+(i%3)*9:8+(i*15)%78,t=z?z[1]+13:88;return`<button class="pin ${e.st}" style="left:${l}%;top:${t}%" onclick="sel=${o.id};go2()">${ini(o.app)}</button>`}).join("")}</div>
+<p style="margin-top:10px">Green pins meet your rules. ${names.length?"":"Add zones on the Rules tab to see them here."}</p>`},
 add:()=>`<h1>Add an offer</h1><p>Enter what the gig app shows you.</p>
 <label>Platform</label><select id="a_app">${["DoorDash","Uber Eats","Grubhub","Spark (Walmart)","Instacart","Roadie","Amazon Flex","Lyft","Other"].map(x=>`<option>${x}</option>`).join("")}</select>
 <label>Payout ($)</label><input id="a_pay" type="number" step="0.25" inputmode="decimal">
@@ -97,7 +109,7 @@ function addOffer(){const g=i=>document.getElementById("a_"+i).value,pay=+g("pay
 if(!(pay>0&&mi>0&&min>0)){document.getElementById("a_err").textContent="Enter payout, miles and minutes as numbers above zero.";return}
 const o={id:S.nid++,app:g("app"),pay,mi,min,rest:g("rest").trim(),zone:g("zone").trim()};S.offers.unshift(o);save();sel=o.id;go2()}
 function decide(st){const o=S.offers.find(x=>x.id==sel),e=ev(o);S.hist.unshift({app:o.app,pay:o.pay,mi:o.mi,fuel:e.fuel,st,date:new Date().toLocaleDateString()});S.offers=S.offers.filter(x=>x.id!=sel);save();go("history")}
-function draw(){const a=document.getElementById("app");a.innerHTML=V[tab]()+(tab=="welcome"?"":`<nav>${[["radar","Radar"],["add","Add offer"],["rules","Rules"],["history","History"]].map(t=>`<button class="${tab==t[0]||(tab=="offer"&&t[0]=="radar")?"on":""}" onclick="go('${t[0]}')">${t[1]}</button>`).join("")}</nav>`)}
+function draw(){const a=document.getElementById("app");a.innerHTML=V[tab]()+(tab=="welcome"?"":`<nav>${[["radar","Radar"],["map","Map"],["add","Add offer"],["rules","Rules"],["history","History"]].map(t=>`<button class="${tab==t[0]||(tab=="offer"&&t[0]=="radar")?"on":""}" onclick="go('${t[0]}')">${t[1]}</button>`).join("")}</nav>`)}
 S.zones=S.zones||[];draw();
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){try{navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}}
 </script></body></html>
